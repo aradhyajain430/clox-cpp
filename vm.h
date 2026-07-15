@@ -1,6 +1,7 @@
 #pragma once
 
 #include "chunk.h"
+#include "value.h"
 
 enum InterpretResult {
     INTERPRET_OK,
@@ -16,5 +17,5 @@ struct VM {
 private:
     InterpretResult run();
     uint8_t readByte();
-    
+    Value readConstant(OpCode constantType);
 };
