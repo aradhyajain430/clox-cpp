@@ -1,4 +1,7 @@
 build/
+.cache/
 *.o
+main
 clox
+compile_commands.json
 .vscode/
