@@ -153,16 +153,17 @@ void Scanner::skipWhitespace() {
         switch(c) {
             case ' ':
             case '\r':
-            case '\t':
+            case '\t': {
                 advance();
                 break;
-
-            case '\n':
+            }
+            case '\n': {
                 line++;
                 advance();
                 break;
+            }
 
-            case '/':
+            case '/': {
                 if (peekNext() == '/') {
                     while (peek() != '\n' && current < source.size()){
                         advance();
@@ -172,8 +173,10 @@ void Scanner::skipWhitespace() {
                     return;
                 }
                 break;
-            default:
+            }
+            default: {
                 return;
+            }
         }
     }
 }

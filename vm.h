@@ -36,6 +36,14 @@ class VM {
     uint8_t readByte();
 
 public:
+    VM() = default;                              // Still want normal construction
+
+    VM(const VM&) = delete;                      // ban copy construction
+    VM& operator=(const VM&) = delete;           // ban copy assignment
+    VM(VM&&) = delete;                           // ban move construction
+    VM& operator=(VM&&) = delete;                // ban move assignment
+
+
     InterpretResult interpret(std::string_view source);
 
 };

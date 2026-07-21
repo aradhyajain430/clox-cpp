@@ -3,7 +3,7 @@
 #include "common.h"
 #include "vm.h"
 #include "debug.h"
-#include "compile.h"
+#include "compiler.h"
 
 #include <iostream>
 #include <string_view>
@@ -20,10 +20,20 @@ Value VM::pop() {
 
 InterpretResult VM::interpret(std::string_view source) {
 
+    Chunk chk;
+
     Compiler compiler(source);
 
-    compiler.compile();
-    return INTERPRET_OK;
+    if(!compiler.compile(chk)) {
+        return INTERPRET_COMPILE_ERROR;
+    }
+
+    chunk = &chk;
+    ip = 0;
+
+    InterpretResult result = run();
+
+    return result;
 }
 
 uint8_t VM::readByte() {
@@ -48,7 +58,6 @@ InterpretResult VM::run() {
             case OP_CONSTANT: {
                 Value constant = chunk->constants[readByte()];
                 push(constant);
-                std::cout << "\n";
                 break;
             }
             case OP_CONSTANT_LONG: {
@@ -57,7 +66,6 @@ InterpretResult VM::run() {
                 uint8_t b3 = readByte();
                 Value constant = chunk->constants[ (b1 << 16) | (b2 << 8) | b3];
                 push(constant);
-                std::cout << "\n";
                 break;
             }
             case OP_NEGATE: {
