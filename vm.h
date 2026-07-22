@@ -3,7 +3,7 @@
 #include "chunk.h"
 #include "value.h"
 
-#include <string>
+#include <string_view>
 
 
 enum InterpretResult {
@@ -16,17 +16,21 @@ class VM {
 
     static constexpr int STACK_MAX = 256;
 
-    Chunk* chunk = nullptr;
-    size_t ip = 0;
+    Chunk* chunk = nullptr; // points into the interpret frame. only exists when called. 
+    size_t ip = 0; // index, not a pointer. 
 
-    Value stack[STACK_MAX]; // using a raw C array because I wanna understand the
-    Value* stackTop {stack};     // specifics of stacks better.
+    // fixed inline storage, 256 slots, zero allocations. std::array<Value, STACK_MAX> is
+    // equivalent here -- same storage, same codegen, plus .size() and no decay.
+    // keep in mind that stackTop is a bare pointer walking a bare buffer. 
+    Value stack[STACK_MAX];  
+    Value* stackTop {stack};
+
 
     void push(Value value);
     Value pop();
 
     template <typename Op>
-    void binaryOp(Op op) {
+    void binaryOp(Op op) { // b then a. Otherwise non-commutative operations get messed up.
         Value b = pop();
         Value a = pop();
         push(op(a, b));
@@ -37,7 +41,7 @@ class VM {
 
 public:
     VM() = default;                              // Still want normal construction
-
+    // you don't want copies because the copy's stackTop remains pointed at the original's memory. 
     VM(const VM&) = delete;                      // ban copy construction
     VM& operator=(const VM&) = delete;           // ban copy assignment
     VM(VM&&) = delete;                           // ban move construction

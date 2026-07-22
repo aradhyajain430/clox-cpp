@@ -17,6 +17,10 @@ enum OpCode {
     OP_RETURN,
 };
 
+//lines.size() is always equal to code.size(). Every byte of a multi-byte instruction has the line
+//This allows the disassembler to compare lines[offset] against lines[offset - 1]. 
+//Both of these can only be modified by write(), so this always holds. 
+
 struct Chunk {
 
     std::vector<uint8_t> code;

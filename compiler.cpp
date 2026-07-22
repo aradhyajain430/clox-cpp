@@ -9,6 +9,7 @@
 #include <format>
 #include <string_view>
 #include <charconv>
+#include <iterator>
 
 
 
@@ -16,6 +17,10 @@ Compiler::Compiler(std::string_view src)
     : scanner(src) {
 }
 
+//ROW ORDER MUST MATCH TOKEN ORDER EXACTLY. 
+//Trailing // comments are documentation.
+//DO NOT delete unused tokens. DO NOT delete stuff randomly.
+//ONLY ADD STUFF IN PLACE. MAINTAIN THE ORDER SPECIFIED IN scanner.h.  
 const Compiler::ParseRule Compiler::rules[] = {
     {&Compiler::grouping, nullptr, PREC_NONE},   // TOKEN_LEFT_PAREN
     {nullptr, nullptr, PREC_NONE},   // TOKEN_RIGHT_PAREN
@@ -60,6 +65,7 @@ const Compiler::ParseRule Compiler::rules[] = {
 };
 
 const Compiler::ParseRule& Compiler::getRule(TokenType type) {
+    static_assert(std::size(rules) == TOKEN_COUNT, "Rule table and TokenType enum are out of sync.");
     return rules[type];
 } 
 
@@ -107,7 +113,7 @@ void Compiler::consume(TokenType type, std::string_view message) {
     errorAtCurrent(message);
 }
 
-
+//previousToken - you emit the byte of the token you have just consumed. 
 void Compiler::emitByte(uint8_t byte) {
     chunk->write(byte, previousToken.line);
 }
@@ -147,10 +153,16 @@ void Compiler::errorAt(const Token& token, std::string_view message) {
 }
 
 void Compiler::number() {
-    double value;
-    std::from_chars(previousToken.lexeme.data(), 
-                    previousToken.lexeme.data() + previousToken.lexeme.size(),
-                    value);
+    double value = 0;
+    const char* begin = previousToken.lexeme.data();
+    const char* end = begin + previousToken.lexeme.size();
+
+    //This part is to validate the magnitude of the number - you can't store a 400 digit number. 
+    auto [ptr, ec] = std::from_chars(begin, end, value);
+    if (ec != std::errc{}) {
+        error("Number literal out of range.");
+        return;
+    }
     emitConstant(value);
 }
 
@@ -165,19 +177,15 @@ void Compiler::unary() {
     parsePrecedence(PREC_UNARY);
 
     switch(opType) {
-        case TOKEN_MINUS: {
-            emitByte(OP_NEGATE);
-            break;
-        }
-        default: {
-            return;
-        }
+        case TOKEN_MINUS: emitByte(OP_NEGATE); break;
+        default: return;
     }
 }
 
 void Compiler::binary() {
     TokenType opType = previousToken.type;
     const ParseRule& rule = getRule(opType);
+    // the + 1 makes it left associative - it ignores an equal precedence operator. 
     parsePrecedence(static_cast<Precedence>(rule.precedence + 1));
 
     switch (opType) {
@@ -202,6 +210,8 @@ void Compiler::parsePrecedence(Precedence precedence) {
     while (precedence <= getRule(currentToken.type).precedence) {
         advance();
         ParseFn infixRule = getRule(previousToken.type).infix;
-        (this->*infixRule)();
+        //Unchecked, safe only by table invariant - every row 
+        //with precedence > PREC_NONE has an infix rule. 
+        (this->*infixRule)(); 
     }
 }

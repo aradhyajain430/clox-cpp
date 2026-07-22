@@ -1,9 +1,8 @@
 #pragma once
 
 #include "scanner.h"
-#include "vm.h"
+#include "chunk.h"
 
-#include <random>
 #include <string_view>
 
 class Compiler {
@@ -21,13 +20,13 @@ class Compiler {
         PREC_CALL,         // . ()
         PREC_PRIMARY
     };
-    using ParseFn = void (Compiler::*)();
+    using ParseFn = void (Compiler::*)(); // pointer to member because these functions are methods and need a "this" 
     struct ParseRule {
         ParseFn prefix;
         ParseFn infix;
         Precedence precedence;
     };
-    static const ParseRule rules[];
+    static const ParseRule rules[]; // unbounded so that you don't silently zero-fill missing rows.
     static const ParseRule& getRule(TokenType type);
 
     Scanner scanner;
@@ -36,7 +35,7 @@ class Compiler {
     Token previousToken {};
     Token currentToken {};
     bool hadError = false;
-    bool panicMode = false;
+    bool panicMode = false; // So only the first error prints. Until there are statements, there's nothing to resync to. 
 
     void advance();
     void expression();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string_view>
+#include <cstddef>
 
 enum TokenType {
     //Single character tokens
@@ -25,18 +26,26 @@ enum TokenType {
     TOKEN_TRUE, TOKEN_VAR, TOKEN_WHILE,
 
     TOKEN_ERROR, TOKEN_EOF,
+
+    //Sentinel - must stay last
+    TOKEN_COUNT
 };
 
 struct Token {
     TokenType type;
+    //overloaded - normally a view into source buffer
+    //on TOKEN_ERROR it carries the error message literal. 
     std::string_view lexeme;
     int line;
 };
 
 class Scanner {
+    //NOT OWNED. I REPEAT, NOT OWNED. THIS AND EVERY TOKEN IS A VIEW INTO runFile()'s std::string.
+    //THE RUNFILE BUFFER MUST OUTLIVE THIS. Any tokens that escape the scope WILL dangle. 
+    //Right now, it only holds because compile and run nest inside runFile.
     std::string_view source;
-    std::size_t current = 0;
-    std::size_t start = 0;
+    size_t current = 0;
+    size_t start = 0;
     int line = 1;
 
     Token makeToken(TokenType type);
@@ -50,9 +59,9 @@ class Scanner {
     char peek() const;
     char peekNext() const;
 
-    bool isDigit(char c);
-    bool isAlpha(char c);
-    TokenType checkKeyword(int offset, int length, std::string_view rest, TokenType type) const;
+    static bool isDigit(char c);
+    static bool isAlpha(char c);
+    TokenType checkKeyword(size_t offset, size_t length, std::string_view rest, TokenType type) const;
     TokenType identifierType();
 
     void skipWhitespace();

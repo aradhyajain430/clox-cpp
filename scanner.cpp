@@ -8,22 +8,22 @@ Scanner::Scanner(std::string_view src)
 }
 
 Token Scanner::makeToken(TokenType type) {
-    Token token;
-    token.type = type;
-    token.line = line;
-    token.lexeme = source.substr(start, current-start);
-    return token;
+    return Token{ .type = type,
+                  .lexeme = source.substr(start, current - start),
+                  .line = line };
+
 }
 
 Token Scanner::errorToken(std::string_view message) {
-    Token token;
-    token.type = TOKEN_ERROR;
-    token.line = line;
-    token.lexeme = message;
-    return token;
+    return Token{ .type = TOKEN_ERROR,
+                  .lexeme = message,
+                  .line = line };
 }
 
 Token Scanner::stringToken() {
+
+    // The size test is required because advance() is unchecked, so an unterminated string
+    // would walk off the end. 
     while (peek()!='"' && current < source.size()) {
         if (peek() == '\n'){
             line++;
@@ -61,10 +61,12 @@ Token Scanner::identifierToken() {
     return makeToken(identifierType());
 }
 
-char Scanner::advance() {
+char Scanner::advance() { // UNCHECKED. Callers guarantee current < source.size().
     return source[current++];
 }
 
+//tests the index directly. Peek returns \0 both for End of String and a real NUL byte.
+//this one directly consumes on success.
 bool Scanner::match(char expected) {
     if(current == source.size()) {
         return false;
@@ -78,11 +80,12 @@ bool Scanner::match(char expected) {
 
 char Scanner::peek() const {
     if (current >= source.size()) {
-        return '\0';
+        return '\0'; // not a sentinel, but just automatically fails isDigit/isAlpha. 
     }
     return source[current];
 }
 
+//bound on current + 1 because that's what is read. string_view doesn't guarantee null terminator.
 char Scanner::peekNext() const {
     if (current + 1 >= source.size()) {
         return '\0';
@@ -98,7 +101,8 @@ bool Scanner::isAlpha(char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
 }
 
-TokenType Scanner::checkKeyword(int offset, int length, std::string_view rest, TokenType type) const{
+//length check ensures that it's a keyword and not reading 'print' off of 'printer'. 
+TokenType Scanner::checkKeyword(size_t offset, size_t length, std::string_view rest, TokenType type) const{
     if (current - start == offset + length && source.substr(start + offset, length) == rest) {
         return type;
     }
@@ -185,7 +189,7 @@ Token Scanner::scanToken() {
     skipWhitespace();
     start = current;
 
-    if(current == source.size()) {
+    if(current >= source.size()) {
         return makeToken(TOKEN_EOF);
     }
 

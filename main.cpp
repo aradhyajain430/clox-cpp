@@ -1,6 +1,4 @@
 #include "common.h"
-#include "chunk.h"
-#include "debug.h"
 #include "vm.h"
 
 #include <sstream>
@@ -8,6 +6,7 @@
 #include <string>
 #include <iostream>
 #include <stdexcept>
+#include <utility>
 
 static void repl(VM& vm){ 
     std::string line;
@@ -24,7 +23,8 @@ static void repl(VM& vm){
 }
 
 static std::string readFile(const char* path) {
-    //do stuff to read the file
+
+    //binary file, which may contain a \0. This is why Scanner::match tests size().
     std::ifstream file(path, std::ios::binary);
 
     if (!file) {
@@ -34,10 +34,13 @@ static std::string readFile(const char* path) {
     std::stringstream ss;
     ss << file.rdbuf();
 
-    return ss.str();
+    return std::move(ss).str();
 }
 
 static int runFile(const char* path, VM& vm) { // int to report exit code
+
+    //SOURCE OWNER. The scanner's 'source' and EVERY TOKEN (except TOKEN_ERROR)
+    //IS A VIEW INTO THIS STRING. NO TOKEN SHOULD ESCAPE THIS SCOPE. 
     std::string source = readFile(path);
     InterpretResult result = vm.interpret(source);
 
@@ -50,7 +53,7 @@ static int runFile(const char* path, VM& vm) { // int to report exit code
     return 0;
 }
 
-int main(int argc, const char* argv[]){
+int main(int argc, char* argv[]){
 
     if (argc > 2) {
         std::cerr << "Usage: clox [path]\n";
@@ -59,7 +62,7 @@ int main(int argc, const char* argv[]){
 
     VM vm;
 
-    if (argc == 1) {
+    if (argc <= 1) {
         repl(vm);
     }
     else {
